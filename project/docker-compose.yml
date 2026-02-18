@@ -1,0 +1,78 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: quickcommerce-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - quickcommerce
+
+  user-service:
+    build: ./services/user-service
+    container_name: user-service
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - DB_NAME=user_db
+      - JWT_SECRET=super-secret-key-change-in-prod
+    depends_on:
+      - mongo
+    networks:
+      - quickcommerce
+
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    ports:
+      - "8002:8002"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - DB_NAME=product_db
+    depends_on:
+      - mongo
+    networks:
+      - quickcommerce
+
+  cart-order-service:
+    build: ./services/cart-order-service
+    container_name: cart-order-service
+    ports:
+      - "8003:8003"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - DB_NAME=cart_order_db
+      - JWT_SECRET=super-secret-key-change-in-prod
+      - PRODUCT_SERVICE_URL=http://product-service:8002
+      - DELIVERY_SERVICE_URL=http://delivery-service:8004
+    depends_on:
+      - mongo
+      - product-service
+      - delivery-service
+    networks:
+      - quickcommerce
+
+  delivery-service:
+    build: ./services/delivery-service
+    container_name: delivery-service
+    ports:
+      - "8004:8004"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - DB_NAME=delivery_db
+      - JWT_SECRET=super-secret-key-change-in-prod
+    depends_on:
+      - mongo
+    networks:
+      - quickcommerce
+
+volumes:
+  mongo_data:
+
+networks:
+  quickcommerce:
+    driver: bridge
